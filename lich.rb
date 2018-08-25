@@ -37,9 +37,8 @@
 #
 
 LICH_VERSION = '4.6.46'
-TESTING = false
 
-if RUBY_VERSION !~ /^2/
+if RUBY_VERSION !~ /^2\.2\./
    if (RUBY_PLATFORM =~ /mingw|win/) and (RUBY_PLATFORM !~ /darwin/i)
       if RUBY_VERSION =~ /^1\.9/
          require 'fiddle'
@@ -674,6 +673,9 @@ module Lich
    def Lich.log(msg)
       $stderr.puts "#{Time.now.strftime("%Y-%m-%d %H:%M:%S")}: #{msg}"
    end
+   def Lich.log_debug(msg)
+      $debug_out.puts "#{Time.now.strftime("%Y-%m-%d %H:%M:%S")}: #{msg}"
+   end
    def Lich.msgbox(args)
       if defined?(Win32)
          if args[:buttons] == :ok_cancel
@@ -1030,11 +1032,12 @@ module Lich
    end
    def Lich.modify_hosts(game_host)
       if Lich.hosts_file and File.exists?(Lich.hosts_file)
-         at_exit { Lich.restore_hosts }
-         Lich.restore_hosts
-         if File.exists?("#{Lich.hosts_file}.bak")
-            return false
-         end
+          $stdout.puts "Adding #{game_host} to #{Lich.hosts_file}" 
+#         at_exit { Lich.restore_hosts }
+#         Lich.restore_hosts
+#         if File.exists?("#{Lich.hosts_file}.bak")
+#            return false
+#         end
          begin
             # copy hosts to hosts.bak
             File.open("#{Lich.hosts_file}.bak", 'w') { |hb| File.open(Lich.hosts_file) { |h| hb.write(h.read) } }
@@ -1048,25 +1051,25 @@ module Lich
          return false
       end
    end
-   def Lich.restore_hosts
-      if Lich.hosts_file and File.exists?(Lich.hosts_file)      
-         begin
-            # fixme: use rename instead?  test rename on windows
-            if File.exists?("#{Lich.hosts_file}.bak")
-               File.open("#{Lich.hosts_file}.bak") { |infile|
-                  File.open(Lich.hosts_file, 'w') { |outfile|
-                     outfile.write(infile.read)
-                  }
-               }
-               File.unlink "#{Lich.hosts_file}.bak"
-            end
-         rescue
-            $stdout.puts "--- error: restore_hosts: #{$!}"
-            Lich.log "error: restore_hosts: #{$!}\n\t#{$!.backtrace.join("\n\t")}"
-            exit(1)
-         end
-      end
-   end
+#   def Lich.restore_hosts
+#      if Lich.hosts_file and File.exists?(Lich.hosts_file)      
+#         begin
+#            # fixme: use rename instead?  test rename on windows
+#            if File.exists?("#{Lich.hosts_file}.bak")
+#               File.open("#{Lich.hosts_file}.bak") { |infile|
+#                  File.open(Lich.hosts_file, 'w') { |outfile|
+#                     outfile.write(infile.read)
+#                  }
+#               }
+#               File.unlink "#{Lich.hosts_file}.bak"
+#            end
+#         rescue
+#            $stdout.puts "--- error: restore_hosts: #{$!}"
+#            Lich.log "error: restore_hosts: #{$!}\n\t#{$!.backtrace.join("\n\t")}"
+#            exit(1)
+#         end
+#      end
+#   end
    def Lich.inventory_boxes(player_id)
       begin
          v = Lich.db.get_first_value('SELECT player_id FROM enable_inventory_boxes WHERE player_id=?;', player_id.to_i)
@@ -1118,35 +1121,35 @@ module Lich
    end
    def Lich.fix_game_host_port(gamehost,gameport)
       if (gamehost == 'gs-plat.simutronics.net') and (gameport.to_i == 10121)
-         gamehost = 'storm.gs4.game.play.net'
+         gamehost = 'chimera.simutronics.com'
          gameport = 10124
       elsif (gamehost == 'gs3.simutronics.net') and (gameport.to_i == 4900)
-         gamehost = 'storm.gs4.game.play.net'
+         gamehost = 'chimera.simutronics.com'
          gameport = 10024
       elsif (gamehost == 'gs4.simutronics.net') and (gameport.to_i == 10321)
-         game_host = 'storm.gs4.game.play.net'
+         game_host = 'chimera.simutronics.com'
          game_port = 10324
       elsif (gamehost == 'prime.dr.game.play.net') and (gameport.to_i == 4901)
-         gamehost = 'dr.simutronics.net'
+         gamehost = 'hydra.simutronics.com'
          gameport = 11024
       end
       [ gamehost, gameport ]
    end
    def Lich.break_game_host_port(gamehost,gameport)
       if (gamehost == 'storm.gs4.game.play.net') and (gameport.to_i == 10324)
-         gamehost = 'gs4.simutronics.net'
+         gamehost = 'chimera.simutronics.com'
          gameport = 10321
       elsif (gamehost == 'storm.gs4.game.play.net') and (gameport.to_i == 10124)
-         gamehost = 'gs-plat.simutronics.net'
+         gamehost = 'chimera.simutronics.com'
          gameport = 10121
       elsif (gamehost == 'storm.gs4.game.play.net') and (gameport.to_i == 10024)
-         gamehost = 'gs3.simutronics.net'
+         gamehost = 'chimera.simutronics.com'
          gameport = 4900
       elsif (gamehost == 'storm.gs4.game.play.net') and (gameport.to_i == 10324)
-         game_host = 'gs4.simutronics.net'
+         game_host = 'chimera.simutronics.com'
          game_port = 10321
       elsif (gamehost == 'dr.simutronics.net') and (gameport.to_i == 11024)
-         gamehost = 'prime.dr.game.play.net'
+         gamehost = 'hydra.simutronics.com'
          gameport = 4901
       end
       [ gamehost, gameport ]
@@ -4551,15 +4554,15 @@ def i_stand_alone
    return !script.want_downstream
 end
 
-def debug(*args)
-   if $LICH_DEBUG
-      if block_given?
-         yield(*args)
-      else
-         echo(*args)
-      end
-   end
-end
+#def debug(*args)
+#   if $LICH_DEBUG
+#      if block_given?
+#         yield(*args)
+#      else
+#         echo(*args)
+#      end
+#   end
+#end
 
 def timetest(*contestants)
    contestants.collect { |code| start = Time.now; 5000.times { code.call }; Time.now - start }
@@ -7045,7 +7048,15 @@ module Games
          @@_buffer   = SharedBuffer.new
          @@_buffer.max_size = 1000
          def Game.open(host, port)
-            @@socket = TCPSocket.open(host, port)
+# Get "real" IP of host and use it here depending on game
+            $stdout.puts "host is #{host}"
+# Default to GS IP..
+            host_ip = "199.188.208.2"
+Resolv::DNS.open({:nameserver=>["8.8.8.8"]}) do |r|
+    host_ip = r.getaddress( host ).to_s ;
+end
+            $stdout.puts "host_ip is #{host_ip}" ;
+            @@socket = TCPSocket.open(host_ip, port)
             begin
                @@socket.setsockopt(Socket::SOL_SOCKET, Socket::SO_KEEPALIVE, true)
             rescue
@@ -7073,7 +7084,7 @@ module Games
                   atmospherics = false
                   while $_SERVERSTRING_ = @@socket.gets
                      @@last_recv = Time.now
-                     @@_buffer.update($_SERVERSTRING_) if TESTING
+                     @@_buffer.update($_SERVERSTRING_) if $debug_cli
                      begin
                         $cmd_prefix = String.new if $_SERVERSTRING_ =~ /^\034GSw/
                         # The Rift, Scatter is broken...
@@ -7135,7 +7146,7 @@ module Games
                            Script.new_downstream_xml($_SERVERSTRING_)
                            stripped_server = strip_xml($_SERVERSTRING_)
                            stripped_server.split("\r\n").each { |line|
-                              @@buffer.update(line) if TESTING
+                              @@buffer.update(line) if $debug_cli
                               Script.new_downstream(line) unless line.empty?
                            }
                         end
@@ -9740,6 +9751,30 @@ alias :bounty? :checkbounty
 # Program start
 #
 
+# Set base_path based on where lich is located
+base_path ||= File.dirname(__FILE__) 
+
+# Set up debugging file based on if --debug is set
+$debug_cli = 0 
+
+if ( ARGV.include? '--debug' )
+      print "base_path: #{base_path}\n" 
+      print "debug_cli: #{$debug_cli}\n" 
+      print "ARGV: #{ARGV}\n" 
+      print "ARGV has --debug\n" 
+        debug_filename = "#{base_path}/logs/debug-#{Time.now.strftime("%Y-%m-%d-%H-%M-%S")}.log" 
+      print "debug_filename: #{debug_filename}\n" 
+        $debug_out = File.open(debug_filename, 'w') 
+        # TODO: Check if debug_filename exists - send message to stdout if it does not exist and set $debug_cli to 0, otherwise continue from here
+        debug_exists = 1 
+        if ( debug_exists )
+                $debug_out.sync = true 
+                $debug_cli = 1 
+              print "debug_cli: #{$debug_cli}\n" 
+                Lich.log_debug ( "DEBUG: ENABLED" ) 
+        end
+end
+
 ARGV.delete_if { |arg| arg =~ /launcher\.exe/i } # added by Simutronics Game Entry
 
 argv_options = Hash.new
@@ -9747,21 +9782,51 @@ bad_args = Array.new
 
 for arg in ARGV
    if (arg == '-h') or (arg == '--help')
-      puts "
-   -h, --help               Display this message and exit
-   -v, --version            Display version number and credits and exit
+   puts 'Usage:  lich [OPTION]'
+   puts ''
+   puts 'Options are:'
+   puts '  -h, --help          Display this message and exit'
+   puts '  -V, --version       Display the program version number and credits.'
+   puts ''
+   puts '  -d, --directory     Set the main Lich program directory.'
+   puts '      --script-dir    Set the directoy where Lich looks for scripts.'
+   puts '      --data-dir      Set the directory where Lich will store script data.'
+   puts '      --temp-dir      Set the directory where Lich will store temporary files.'
+   puts '      --home=<directory>      Set home directory for Lich (default: location of this file)'
+   puts '      --scripts=<directory>   Set directory for script files (default: home/scripts)'
+   puts '      --data=<directory>      Set directory for data files (default: home/data)' 
+   puts '      --temp=<directory>      Set directory for temp files (default: home/temp)'
+   puts '      --logs=<directory>      Set directory for log files (default: home/logs)'
+   puts '      --maps=<directory>      Set directory for map images (default: home/maps)'
+   puts '      --backup=<directory>    Set directory for backups (default: home/backup)'
+   puts ''
+   puts '  -w, --wizard        Run in Wizard mode (default)'
+   puts '  -s, --stormfront    Run in StormFront mode.'
+   puts '      --avalon        Run in Avalon mode.'
+   puts ''
+   puts '      --gemstone      Connect to the Gemstone IV Prime server (default).'
+   puts '      --dragonrealms  Connect to the DragonRealms server.'
+   puts '      --platinum      Connect to the Gemstone IV/DragonRealms Platinum server.'
+   puts '  -g, --game          Set the IP address and port of the game.  See example below.'
+   puts ''
+   puts '      --install       Edits the Windows/WINE registry so that Lich is started when logging in using the website or SGE.'
+   puts '      --setup         Must be ran as administrator/root (sudo): Sets up hosts in host file' 
+   puts '      --uninstall     Removes Lich from the registry.'
+   puts ''
+   puts '      --start-scripts=<script1,script2,etc>   Start the specified scripts after login'
+   puts ''
+   puts 'The majority of Lich\'s built-in functionality was designed and implemented with Simutronics MUDs in mind (primarily Gemstone IV): as such, many options/features provided by Lich may not be applicable when it is used with a non-Simutronics MUD.  In nearly every aspect of the program, users who are not playing a Simutronics game should be aware that if the description of a feature/option does not sound applicable and/or compatible with the current game, it should be assumed that the feature/option is not.  This particularly applies to in-script methods (commands) that depend heavily on the data received from the game conforming to specific patterns (for instance, it\'s extremely unlikely Lich will know how much "health" your character has left in a non-Simutronics game, and so the "health" script command will most likely return a value of 0).'
+   puts ''
+   puts 'The level of increase in efficiency when Lich is run in "bare-bones mode" (i.e. started with the --bare argument) depends on the data stream received from a given game, but on average results in a moderate improvement and it\'s recommended that Lich be run this way for any game that does not send "status information" in a format consistent with Simutronics\' GSL or XML encoding schemas.'
+   puts ''
+   puts ''
+   puts 'Examples:'
+   puts '  lich -w -d /usr/bin/lich/          (run Lich in Wizard mode using the dir \'/usr/bin/lich/\' as the program\'s home)'
+   puts '  lich -g gs3.simutronics.net:4000   (run Lich using the IP address \'gs3.simutronics.net\' and the port number \'4000\')'
+   puts '  lich --script-dir /mydir/scripts   (run Lich with its script directory set to \'/mydir/scripts\')'
+   puts '  lich --bare -g skotos.net:5555     (run in bare-bones mode with the IP address and port of the game set to \'skotos.net:5555\')'
+   puts ''
 
-   --home=<directory>      Set home directory for Lich (default: location of this file)
-   --scripts=<directory>   Set directory for script files (default: home/scripts)
-   --data=<directory>      Set directory for data files (default: home/data)
-   --temp=<directory>      Set directory for temp files (default: home/temp)
-   --logs=<directory>      Set directory for log files (default: home/logs)
-   --maps=<directory>      Set directory for map images (default: home/maps)
-   --backup=<directory>    Set directory for backups (default: home/backup)
-
-   --start-scripts=<script1,script2,etc>   Start the specified scripts after login
-
-"
       exit
    elsif (arg == '-v') or (arg == '--version')
       puts "The Lich, version #{LICH_VERSION}"
@@ -9854,8 +9919,8 @@ for arg in ARGV
       argv_options[:reconnect_delay] = $1
    elsif arg =~ /^--host=(.+):(.+)$/
       argv_options[:host] = { :domain => $1, :port => $2.to_i }
-   elsif arg =~ /^--hosts-file=(.+)$/i
-      argv_options[:hosts_file] = $1
+#   elsif arg =~ /^--hosts-file=(.+)$/i
+#      argv_options[:hosts_file] = $1
    elsif arg =~ /^--gui$/i
       argv_options[:gui] = true
    elsif arg =~ /^--game=(.+)$/i
@@ -10047,43 +10112,43 @@ if did_trusted_defaults.nil?
    end
 end
 
-if ARGV.any? { |arg| (arg == '-h') or (arg == '--help') }
-   puts 'Usage:  lich [OPTION]'
-   puts ''
-   puts 'Options are:'
-   puts '  -h, --help          Display this list.'
-   puts '  -V, --version       Display the program version number and credits.'
-   puts ''
-   puts '  -d, --directory     Set the main Lich program directory.'
-   puts '      --script-dir    Set the directoy where Lich looks for scripts.'
-   puts '      --data-dir      Set the directory where Lich will store script data.'
-   puts '      --temp-dir      Set the directory where Lich will store temporary files.'
-   puts ''
-   puts '  -w, --wizard        Run in Wizard mode (default)'
-   puts '  -s, --stormfront    Run in StormFront mode.'
-   puts '      --avalon        Run in Avalon mode.'
-   puts ''
-   puts '      --gemstone      Connect to the Gemstone IV Prime server (default).'
-   puts '      --dragonrealms  Connect to the DragonRealms server.'
-   puts '      --platinum      Connect to the Gemstone IV/DragonRealms Platinum server.'
-   puts '  -g, --game          Set the IP address and port of the game.  See example below.'
-   puts ''
-   puts '      --install       Edits the Windows/WINE registry so that Lich is started when logging in using the website or SGE.'
-   puts '      --uninstall     Removes Lich from the registry.'
-   puts ''
-   puts 'The majority of Lich\'s built-in functionality was designed and implemented with Simutronics MUDs in mind (primarily Gemstone IV): as such, many options/features provided by Lich may not be applicable when it is used with a non-Simutronics MUD.  In nearly every aspect of the program, users who are not playing a Simutronics game should be aware that if the description of a feature/option does not sound applicable and/or compatible with the current game, it should be assumed that the feature/option is not.  This particularly applies to in-script methods (commands) that depend heavily on the data received from the game conforming to specific patterns (for instance, it\'s extremely unlikely Lich will know how much "health" your character has left in a non-Simutronics game, and so the "health" script command will most likely return a value of 0).'
-   puts ''
-   puts 'The level of increase in efficiency when Lich is run in "bare-bones mode" (i.e. started with the --bare argument) depends on the data stream received from a given game, but on average results in a moderate improvement and it\'s recommended that Lich be run this way for any game that does not send "status information" in a format consistent with Simutronics\' GSL or XML encoding schemas.'
-   puts ''
-   puts ''
-   puts 'Examples:'
-   puts '  lich -w -d /usr/bin/lich/          (run Lich in Wizard mode using the dir \'/usr/bin/lich/\' as the program\'s home)'
-   puts '  lich -g gs3.simutronics.net:4000   (run Lich using the IP address \'gs3.simutronics.net\' and the port number \'4000\')'
-   puts '  lich --script-dir /mydir/scripts   (run Lich with its script directory set to \'/mydir/scripts\')'
-   puts '  lich --bare -g skotos.net:5555     (run in bare-bones mode with the IP address and port of the game set to \'skotos.net:5555\')'
-   puts ''
-   exit
-end
+#if ARGV.any? { |arg| (arg == '-h') or (arg == '--help') }
+#   puts 'Usage:  lich [OPTION]'
+#   puts ''
+#   puts 'Options are:'
+#   puts '  -h, --help          Display this list.'
+#   puts '  -V, --version       Display the program version number and credits.'
+#   puts ''
+#   puts '  -d, --directory     Set the main Lich program directory.'
+#   puts '      --script-dir    Set the directoy where Lich looks for scripts.'
+#   puts '      --data-dir      Set the directory where Lich will store script data.'
+#   puts '      --temp-dir      Set the directory where Lich will store temporary files.'
+#   puts ''
+#   puts '  -w, --wizard        Run in Wizard mode (default)'
+#   puts '  -s, --stormfront    Run in StormFront mode.'
+#   puts '      --avalon        Run in Avalon mode.'
+#   puts ''
+#   puts '      --gemstone      Connect to the Gemstone IV Prime server (default).'
+#   puts '      --dragonrealms  Connect to the DragonRealms server.'
+#   puts '      --platinum      Connect to the Gemstone IV/DragonRealms Platinum server.'
+#   puts '  -g, --game          Set the IP address and port of the game.  See example below.'
+#   puts ''
+#   puts '      --install       Edits the Windows/WINE registry so that Lich is started when logging in using the website or SGE.'
+#   puts '      --uninstall     Removes Lich from the registry.'
+#   puts ''
+#   puts 'The majority of Lich\'s built-in functionality was designed and implemented with Simutronics MUDs in mind (primarily Gemstone IV): as such, many options/features provided by Lich may not be applicable when it is used with a non-Simutronics MUD.  In nearly every aspect of the program, users who are not playing a Simutronics game should be aware that if the description of a feature/option does not sound applicable and/or compatible with the current game, it should be assumed that the feature/option is not.  This particularly applies to in-script methods (commands) that depend heavily on the data received from the game conforming to specific patterns (for instance, it\'s extremely unlikely Lich will know how much "health" your character has left in a non-Simutronics game, and so the "health" script command will most likely return a value of 0).'
+#   puts ''
+#   puts 'The level of increase in efficiency when Lich is run in "bare-bones mode" (i.e. started with the --bare argument) depends on the data stream received from a given game, but on average results in a moderate improvement and it\'s recommended that Lich be run this way for any game that does not send "status information" in a format consistent with Simutronics\' GSL or XML encoding schemas.'
+#   puts ''
+#   puts ''
+#   puts 'Examples:'
+#   puts '  lich -w -d /usr/bin/lich/          (run Lich in Wizard mode using the dir \'/usr/bin/lich/\' as the program\'s home)'
+#   puts '  lich -g gs3.simutronics.net:4000   (run Lich using the IP address \'gs3.simutronics.net\' and the port number \'4000\')'
+#   puts '  lich --script-dir /mydir/scripts   (run Lich with its script directory set to \'/mydir/scripts\')'
+#   puts '  lich --bare -g skotos.net:5555     (run in bare-bones mode with the IP address and port of the game set to \'skotos.net:5555\')'
+#   puts ''
+#   exit
+#end
 
 
 
@@ -10359,7 +10424,19 @@ if argv_options[:sal]
    end
 end
 
-if arg = ARGV.find { |a| (a == '-g') or (a == '--game') }
+if ARGV.include?('--setup')
+   $stdout.puts "Welcome to the initialiazation setup for hosts..."
+   # TODO check if running as root... if not then exit with message as such
+   $stdout.puts "If you are not running this as root then it will fail but not tell you..."
+   # TODO check to see if chimera and hydra are already in the hosts file
+   $stdout.puts "If the entries already exist in the hosts file they will be added again and you will have a bigger hosts file..."
+   # if chimera is missing from host file then add it...
+   Lich.modify_hosts('chimera.simutronics.com')
+   # if hydra is missing from host file then add it...
+   Lich.modify_hosts('hydra.simutronics.com')
+   $stdout.puts "Host Initiation complete..."
+   exit
+elsif arg = ARGV.find { |a| (a == '-g') or (a == '--game') }
    game_host, game_port = ARGV[ARGV.index(arg)+1].split(':')
    game_port = game_port.to_i
    if ARGV.any? { |arg| (arg == '-s') or (arg == '--stormfront') }
@@ -10375,11 +10452,11 @@ elsif ARGV.include?('--gemstone')
    if ARGV.include?('--platinum')
       $platinum = true
       if ARGV.any? { |arg| (arg == '-s') or (arg == '--stormfront') }
-         game_host = 'storm.gs4.game.play.net'
+         game_host = 'chimera.simutronics.com'
          game_port = 10124
          $frontend = 'stormfront'
       else
-         game_host = 'gs-plat.simutronics.net'
+         game_host = 'chimera.simutronics.com'
          game_port = 10121
          if ARGV.any? { |arg| arg == '--avalon' }
             $frontend = 'avalon'
@@ -10390,11 +10467,11 @@ elsif ARGV.include?('--gemstone')
    else
       $platinum = false
       if ARGV.any? { |arg| (arg == '-s') or (arg == '--stormfront') }
-         game_host = 'storm.gs4.game.play.net'
+         game_host = 'chimera.simutronics.com'
          game_port = 10024
          $frontend = 'stormfront'
       else
-         game_host = 'gs3.simutronics.net'
+         game_host = 'chimera.simutronics.com'
          game_port = 4900
          if ARGV.any? { |arg| arg == '--avalon' }
             $frontend = 'avalon'
@@ -10406,11 +10483,11 @@ elsif ARGV.include?('--gemstone')
 elsif ARGV.include?('--shattered')
    $platinum = false
    if ARGV.any? { |arg| (arg == '-s') or (arg == '--stormfront') }
-      game_host = 'storm.gs4.game.play.net'
+      game_host = 'chimera.simutronics.com'
       game_port = 10324
       $frontend = 'stormfront'
    else
-      game_host = 'gs4.simutronics.net'
+      game_host = 'chimera.simutronics.com'
       game_port = 10321
       if ARGV.any? { |arg| arg == '--avalon' }
          $frontend = 'avalon'
@@ -10440,7 +10517,7 @@ elsif ARGV.include?('--dragonrealms')
          Lich.log "fixme"
          exit
       else
-         game_host = 'dr.simutronics.net'
+         game_host = 'hydra.simutronics.com'
          game_port = 4901
          if ARGV.any? { |arg| arg == '--avalon' }
             $frontend = 'avalon'
@@ -12023,14 +12100,15 @@ main_thread = Thread.new {
       end
       Lich.log 'info: connected'
    elsif game_host and game_port
-      unless Lich.hosts_file
-         Lich.log "error: cannot find hosts file"
-         $stdout.puts "error: cannot find hosts file"
-         exit
-      end
+#      unless Lich.hosts_file
+#         Lich.log "error: cannot find hosts file"
+#         $stdout.puts "error: cannot find hosts file"
+#         exit
+#      end
       game_quad_ip = IPSocket.getaddress(game_host)
       error_count = 0
       begin
+         Lich.log "Firing Listener at:  #{game_port}"
          listener = TCPServer.new('127.0.0.1', game_port)
          begin
             listener.setsockopt(Socket::SOL_SOCKET,Socket::SO_REUSEADDR,1)
@@ -12047,7 +12125,7 @@ main_thread = Thread.new {
             retry
          end
       end
-      Lich.modify_hosts(game_host)
+#      Lich.modify_hosts(game_host)
 
       $stdout.puts "Pretending to be #{game_host}"
       $stdout.puts "Listening on port #{game_port}"
@@ -12061,7 +12139,7 @@ main_thread = Thread.new {
          listener.close rescue nil
          $stdout.puts 'error: timed out waiting for client to connect'
          Lich.log 'error: timed out waiting for client to connect'
-         Lich.restore_hosts
+#         Lich.restore_hosts
          exit
       }
 #      $_CLIENT_ = listener.accept
@@ -12070,11 +12148,12 @@ main_thread = Thread.new {
       timeout_thread.kill
       $stdout.puts "Connection with the local game client is open."
       Lich.log "info: connection with the game client is open"
-      Lich.restore_hosts
+#      Lich.restore_hosts
       if test_mode
          $_SERVER_ = $stdin # fixme
          $_CLIENT_.puts "Running in test mode: host socket set to stdin."
       else
+         $stdout.puts 'info: connecting to the real game host...'
          Lich.log 'info: connecting to the real game host...'
          game_host, game_port = Lich.fix_game_host_port(game_host, game_port)
          begin
