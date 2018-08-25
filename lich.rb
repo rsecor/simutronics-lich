@@ -38,7 +38,7 @@
 
 LICH_VERSION = '4.6.46'
 
-if RUBY_VERSION !~ /^2\.2\./
+if RUBY_VERSION !~ /^2\.(0|1|2)\./
    if (RUBY_PLATFORM =~ /mingw|win/) and (RUBY_PLATFORM !~ /darwin/i)
       if RUBY_VERSION =~ /^1\.9/
          require 'fiddle'
