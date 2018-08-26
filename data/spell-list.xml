@@ -79,7 +79,7 @@
    <spell availability='all' name='Unpoison' number='114' type='utility'>
       <cost type='mana'>14</cost>
    </spell>
-   <spell availability='all' name='Fasthr&apos;s Reward' number='115' type='defense'>
+   <spell availability='self-cast' name='Fasthr&apos;s Reward' number='115' type='defense'>
       <duration cast-type='self' span='stackable' multicastable='yes'>20 + Spells.minorspiritual</duration>
       <duration cast-type='target'>2</duration>
       <cost type='mana'>15</cost>
@@ -103,7 +103,7 @@
    <spell availability='all' name='Spirit Dispel' number='119' type='attack/utility'>
       <cost type='mana'>19</cost>
    </spell>
-   <spell availability='all' name='Lesser Shroud' number='120' type='defense'>
+   <spell availability='self-cast' name='Lesser Shroud' number='120' type='defense'>
       <duration cast-type='self' span='stackable' multicastable='yes'>20 + Spells.minorspiritual</duration>
       <duration cast-type='target' span='refreshable'>2</duration>
       <cost type='mana'>20 + (([[Spells.minorspiritual,Stats.level].min - 20,0].max) / 6.0).round</cost>
@@ -968,17 +968,17 @@
    <spell availability='all' name='Core Tap' number='950' type='attack'>
       <cost type='mana'>50</cost>
    </spell>
-   <spell availability='self-cast' name='Core Tap Recovery (1 Charge)' number='996'>
+   <spell availability='self-cast' name='Core Tap - First Use' number='996'>
       <duration>1</duration>
    </spell>
-   <spell availability='self-cast' name='Core Tap Recovery (2 Charges)' number='997'>
-      <duration>s = Spell['Core Tap Recovery (1 Charge)'];s.timeleft &gt; 0.0 ? s.timeleft : 1</duration>
+   <spell availability='self-cast' name='Core Tap - Second Use' number='997'>
+      <duration>s = Spell['Core Tap - First Use'];s.timeleft &gt; 0.0 ? s.timeleft : 1</duration>
    </spell>
-   <spell availability='self-cast' name='Core Tap Recovery (3 Charges)' number='998'>
-      <duration>s = Spell['Core Tap Recovery (2 Charges)'];s.timeleft &gt; 0.0 ? s.timeleft : 1</duration>
+   <spell availability='self-cast' name='Core Tap - Third Use' number='998'>
+      <duration>s = Spell['Core Tap - Second Use'];s.timeleft &gt; 0.0 ? s.timeleft : 1</duration>
    </spell>
    <spell availability='self-cast' name='Core Tap Recovery' number='999'>
-      <duration>if which = ['3 Charges','2 Charges','1 Charge'].find { |w| Spell["Core Tap Recovery (#{w})"].timeleft > 0 }; Spell["Core Tap Recovery (#{which})"].timeleft; else; 1; end</duration>
+      <duration>if which = ['Third','Second','First'].find { |w| Spell["Core Tap - #{w} Use"].timeleft > 0 }; Spell["Core Tap - #{which} Use"].timeleft; else; 1; end</duration>
       <message type='start'>Tapping into the elemental core of Elanthia, you seize part of its energy\.  Swirling ribbons of fiery red, deep blue, earthen brown, and airy white energy rise up from the (?:floor|ground) and surround you\.  They linger for a brief moment, then explode into a shower of sparks!</message>
       <message type='start'>You are too exhausted to cast Core Tap right now\.</message>
       <message type='end'>Your exhaustion from tapping into the elemental core fades\.</message>
