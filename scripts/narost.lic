@@ -9,9 +9,10 @@
 	author: Tillmen (tillmen@lichproject.org)
 	game: any
 	tags: core, movement
-	version: 0.2
 
 =end
+
+# fixme: click arrow to next map to show map
 
 i_stand_alone
 clear
@@ -40,10 +41,6 @@ trouble = script.vars.any? { |var| var =~ /trouble/i }
 Settings.load
 setting_keep_above = Settings['keep_above']
 setting_keep_above = true if setting_keep_above.nil?
-setting_borderless = Settings['borderless']
-setting_borderless = false if setting_borderless.nil?
-setting_hide_scrollbars = Settings['hide_scrollbars']
-setting_hide_scrollbars = false if setting_hide_scrollbars.nil?
 setting_follow     = nil
 menu_follow        = nil
 window_width       = Settings['window_width'] || 400
@@ -312,33 +309,15 @@ find_clicked_room = proc { |click_x, click_y|
 		not room.nil? and not room.map_name.nil? and not room.map_x.nil? and not room.map_y.nil? and not room.map_roomsize.nil? and (current_map =~ /#{room.map_name}$/) and (room.map_x > click_x - (room.map_roomsize/2)) and (room.map_x < click_x + (room.map_roomsize/2)) and (room.map_y > click_y - (room.map_roomsize/2)) and (room.map_y < click_y + (room.map_roomsize/2)) }
 }
 
-set_scrolling_policy = proc { |scroller| 
-	if setting_hide_scrollbars then
-		scroller.set_policy(Gtk::POLICY_NEVER, Gtk::POLICY_NEVER)
-	else
-		scroller.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_ALWAYS)
-	end
-}
-
 Gtk.queue {
 	window = Gtk::Window.new
 	window.title = "Narost: #{Char.name}"
 	window.signal_connect('delete_event') { narost_exit = true }
 	window.signal_connect('size_allocate') { window_resized = true }
-	window.signal_connect('key-press-event') do |w, e|
-		if e.keyval == Gdk::Keyval::GDK_Control_L and setting_borderless then
-			window.set_decorated(true)
-		end
-	end
-	window.signal_connect('key-release-event') do |w, e|
-		if e.keyval == Gdk::Keyval::GDK_Control_L and setting_borderless then
-			window.set_decorated(false)
-		end
-	end
-	
+
 	scroller = Gtk::ScrolledWindow.new
 	scroller.border_width = 0
-	set_scrolling_policy.call(scroller)
+	scroller.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_ALWAYS)
 	window.add(scroller)
 
 	layout = Gtk::Layout.new
@@ -364,17 +343,6 @@ Gtk.queue {
 	menu_keep_above.active = setting_keep_above
 	menu_keep_above.signal_connect('toggled') { |owner| setting_keep_above = window.keep_above = owner.active? }
 
-	menu_borderless = Gtk::CheckMenuItem.new('borderless')
-	menu_borderless.active = setting_borderless
-	menu_borderless.signal_connect('toggled') { |owner| window.set_decorated(!setting_borderless = owner.active?) }
-	
-	menu_hide_scrollbars = Gtk::CheckMenuItem.new('hide scrollbars')
-	menu_hide_scrollbars.active = setting_hide_scrollbars
-	menu_hide_scrollbars.signal_connect('toggled') { |owner| 
-		setting_hide_scrollbars = owner.active?
-		set_scrolling_policy.call(scroller)
-	}
-	
 	menu_find = Gtk::MenuItem.new('find room')
 	menu_find.signal_connect('activate') {
 		Gtk.queue {
@@ -424,26 +392,10 @@ Gtk.queue {
 	}
 
 	menu_map_list = Gtk::Menu.new
-	map_submenus = Hash.new
 	used_maps.each { |map_name|
-		mod_map_name = map_name.sub(/(?:\-[0-9]+)?\.[A-z]{1,3}$/,'')
-		if mod_map_name =~ /^(.+?)\-(.+)$/
-			submenu_name = $1.strip
-			part_map_name = $2.strip
-			unless submenu = map_submenus[submenu_name]
-				foo = Gtk::MenuItem.new(submenu_name)
-				menu_map_list.append(foo)
-				map_submenus[submenu_name] = Gtk::Menu.new
-				foo.submenu = map_submenus[submenu_name]
-			end
-			item = Gtk::MenuItem.new(part_map_name, false)
-			item.signal_connect('activate') { change_map.call("#{map_dir}#{map_name}"); no_room.call }
-			submenu.append(item)
-		else
-			item = Gtk::MenuItem.new(mod_map_name, false)
-			item.signal_connect('activate') { change_map.call("#{map_dir}#{map_name}"); no_room.call }
-			menu_map_list.append(item)
-		end
+		item = Gtk::MenuItem.new(map_name.sub(/(?:\-[0-9]+)?\.[A-z]{1,3}$/,''), false)
+		item.signal_connect('activate') { change_map.call("#{map_dir}#{map_name}"); no_room.call }
+		menu_map_list.append(item)
 	}
 
 	menu_view_map = Gtk::MenuItem.new('view map')
@@ -497,8 +449,6 @@ Gtk.queue {
 	menu = Gtk::Menu.new
 	menu.append(menu_follow)
 	menu.append(menu_keep_above)
-	menu.append(menu_borderless)
-	menu.append(menu_hide_scrollbars)
 	menu.append(menu_find)
 	menu.append(menu_view_map)
 	menu.append(menu_scale_map)
@@ -645,7 +595,6 @@ Gtk.queue {
 	end
 
 	window.keep_above = true if setting_keep_above
-	window.set_decorated(false) if setting_borderless
 
 	start = true
 }
@@ -653,7 +602,6 @@ Gtk.queue {
 before_dying {
 	window_position = window_width = window_height = nil
 	Gtk.queue {
-		window.set_decorated(true) # otherwise window.position returns bad data (at least on windows 8)
 		window_position = window.position
 		window_width = window.allocation.width
 		window_height = window.allocation.height
@@ -664,8 +612,6 @@ before_dying {
 	Settings['window_width'] = window_width if (window_width.class == Fixnum) and (window_width > 100)
 	Settings['window_height'] = window_height if (window_height.class == Fixnum) and (window_height > 100)
 	Settings['keep_above'] = setting_keep_above
-	Settings['borderless'] = setting_borderless
-	Settings['hide_scrollbars'] = setting_hide_scrollbars
 	Settings['global_scale'] = global_scale
 	Settings['map_scale'] = map_scale
 	Settings.save
